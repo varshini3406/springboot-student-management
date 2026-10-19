@@ -1,0 +1,3 @@
+
+ALTER TABLE students
+ADD COLUMN phone VARCHAR(20);

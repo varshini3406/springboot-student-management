@@ -1,0 +1,18 @@
+target/
+.env
+.env.*
+!.env.example
+application-prod.properties
+*.log
+.idea/
+.vscode/
+
+# Local database files
+data/
+*.mv.db
+*.trace.db
+
+# Environment secrets
+.env
+.env.*
+!.env.example
