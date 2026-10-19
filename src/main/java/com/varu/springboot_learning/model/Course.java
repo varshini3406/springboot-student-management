@@ -1,5 +1,6 @@
 package com.varu.springboot_learning.model;
 
+import jakarta.persistence.Table;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "courses")
 public class Course {
 
     @Id

@@ -1,3 +1,4 @@
+
 package com.varu.springboot_learning.model;
 
 import jakarta.persistence.Entity;
@@ -8,9 +9,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.JoinColumn;
-import com.varu.springboot_learning.model.Course;
 
 @Entity
 @Table(name = "students")
@@ -23,9 +21,13 @@ public class Student {
     @NotBlank(message = "Student name cannot be empty")
     private String name;
 
+    private String email;
+
+    private String phone;
+
     @ManyToOne
-@JoinColumn(name = "course_id", nullable = false)
-private Course course;
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;
 
     public Student() {
     }
@@ -52,6 +54,22 @@ private Course course;
         this.name = name;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
     public Course getCourse() {
         return course;
     }
@@ -60,6 +78,7 @@ private Course course;
         this.course = course;
     }
 }
+
 
 // /@NotNull	The value must not be null.
 // @Positive	The number must be greater than zero.
