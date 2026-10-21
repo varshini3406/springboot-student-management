@@ -2,7 +2,7 @@ target/
 .env
 .env.*
 !.env.example
-application-prod.properties
+
 *.log
 .idea/
 .vscode/

@@ -1,4 +1,3 @@
-
 package com.varu.springboot_learning.controller;
 
 import com.varu.springboot_learning.dto.StudentRequestDTO;
@@ -9,10 +8,8 @@ import com.varu.springboot_learning.service.StudentService;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -30,58 +27,54 @@ public class StudentController {
         this.studentService = studentService;
     }
 
-    // Search students by exact name
+    private StudentResponseDTO toDTO(Student student) {
+        return new StudentResponseDTO(
+                student.getId(),
+                student.getName(),
+                student.getEmail(),
+                student.getPhone(),
+                student.getCourse() != null
+                        ? student.getCourse().getId()
+                        : null,
+                student.getCourse() != null
+                        ? student.getCourse().getName()
+                        : null
+        );
+    }
+
     @GetMapping("/search/name")
     public List<StudentResponseDTO> searchByName(
             @RequestParam String name) {
-
         return studentService.findStudentsByName(name)
-                .stream()
-                .map(student -> new StudentResponseDTO(
-                        student.getId(),
-                        student.getName(),
-                        student.getCourse().getName()
-                ))
-                .toList();
+                .stream().map(this::toDTO).toList();
     }
 
-    // Search students by course name
     @GetMapping("/search/course")
     public List<StudentResponseDTO> searchByCourse(
             @RequestParam String course) {
-
         return studentService.findStudentsByCourse(course)
-                .stream()
-                .map(student -> new StudentResponseDTO(
-                        student.getId(),
-                        student.getName(),
-                        student.getCourse().getName()
-                ))
-                .toList();
+                .stream().map(this::toDTO).toList();
     }
 
-    // Search students by partial name
     @GetMapping("/search")
     public List<StudentResponseDTO> searchByPartialName(
             @RequestParam String name) {
-
         return studentService.searchStudentsByName(name)
-                .stream()
-                .map(student -> new StudentResponseDTO(
-                        student.getId(),
-                        student.getName(),
-                        student.getCourse().getName()
-                ))
-                .toList();
+                .stream().map(this::toDTO).toList();
     }
 
-    // Get students with pagination and sorting
     @GetMapping
     public Page<StudentResponseDTO> getAllStudents(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String direction) {
+
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Page must be non-negative and size must be 1–100");
+        }
 
         Sort sort = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -90,82 +83,41 @@ public class StudentController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         return studentService.getAllStudents(pageable)
-                .map(student -> new StudentResponseDTO(
-                        student.getId(),
-                        student.getName(),
-                        student.getCourse() != null
-                                ? student.getCourse().getName()
-                                : null
-                ));
+                .map(this::toDTO);
     }
 
-    // Get one student by ID
     @GetMapping("/{id}")
-    public StudentResponseDTO getStudentById(
-            @PathVariable Long id) {
-
-        Student student = studentService.getStudentById(id);
-
-        if (student == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Student not found");
-        }
-
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getName(),
-                student.getCourse() != null
-                        ? student.getCourse().getName()
-                        : null
-        );
+    public StudentResponseDTO getStudentById(@PathVariable Long id) {
+        return toDTO(studentService.getStudentById(id));
     }
 
-    // Add a student using an existing course ID
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public StudentResponseDTO addStudent(
             @Valid @RequestBody StudentRequestDTO request) {
-
-        Student student = studentService.addStudentWithCourse(
-                request.getName(),
-                request.getCourseId()
-        );
-
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getName(),
-                student.getCourse().getName()
-        );
+        return toDTO(studentService.addStudentWithCourse(request));
     }
 
-    // Update a student
     @PutMapping("/{id}")
-    public StudentResponseDTO updateStudent(
-            @PathVariable Long id,
-            @RequestBody Student updatedStudent) {
+public StudentResponseDTO updateStudent(
+        @PathVariable Long id,
+        @Valid @RequestBody StudentRequestDTO request) {
 
-        Student student =
-                studentService.updateStudent(id, updatedStudent);
+    Student updatedStudent = studentService.updateStudent(id, request);
 
-        if (student == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Student not found");
-        }
-
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getName(),
-                student.getCourse() != null
-                        ? student.getCourse().getName()
-                        : null
+    if (updatedStudent == null) {
+        throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Student not found"
         );
     }
 
-    // Delete a student
+    return toDTO(updatedStudent);
+}
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteStudent(@PathVariable Long id) {
-
         boolean deleted = studentService.deleteStudent(id);
 
         if (!deleted) {
@@ -174,7 +126,6 @@ public class StudentController {
         }
     }
 }
-
 
 // / @PostMapping("/students") handles POST requests sent to /students
 // @RequestBody Student student tells Spring Boot to deserialize the incoming JSON request body into a Student object. The JSON data sent in the request body is automatically converted into a Student instance based on the fields defined in the Student record.

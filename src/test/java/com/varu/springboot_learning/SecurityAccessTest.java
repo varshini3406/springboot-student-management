@@ -25,8 +25,7 @@ class SecurityAccessTest {
     @Test
     void unauthenticatedUserShouldBeRedirectedToLogin() throws Exception {
         mockMvc.perform(get("/students"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -56,8 +55,7 @@ void adminShouldAccessCourses() throws Exception {
 @WithAnonymousUser
 void unauthenticatedUserShouldBeDeniedAccessToCourses() throws Exception {
     mockMvc.perform(get("/courses"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/login"));
+            .andExpect(status().isUnauthorized());
 }
 
 

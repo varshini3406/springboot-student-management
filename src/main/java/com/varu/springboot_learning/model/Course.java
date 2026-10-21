@@ -1,5 +1,5 @@
 package com.varu.springboot_learning.model;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Table;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "courses")
+@Table(name = "course")
 public class Course {
 
     @Id
@@ -19,7 +19,8 @@ public class Course {
     private Long id;
 
     private String name;
-@OneToMany(mappedBy = "course", cascade = CascadeType.PERSIST)
+
+@JsonIgnore @OneToMany(mappedBy = "course", cascade = CascadeType.PERSIST)
 private List<Student> students = new ArrayList<>();
     public Course() {
     }

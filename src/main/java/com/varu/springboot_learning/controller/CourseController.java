@@ -1,13 +1,11 @@
-
-
 package com.varu.springboot_learning.controller;
 
 import com.varu.springboot_learning.dto.StudentResponseDTO;
 import com.varu.springboot_learning.model.Course;
 import com.varu.springboot_learning.repository.CourseRepository;
-import com.varu.springboot_learning.service.StudentService;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -18,13 +16,9 @@ import java.util.List;
 public class CourseController {
 
     private final CourseRepository courseRepository;
-    private final StudentService studentService;
 
-    public CourseController(
-            CourseRepository courseRepository,
-            StudentService studentService) {
+    public CourseController(CourseRepository courseRepository) {
         this.courseRepository = courseRepository;
-        this.studentService = studentService;
     }
 
     @GetMapping
@@ -32,7 +26,7 @@ public class CourseController {
         return courseRepository.findAll();
     }
 
-    @PreAuthorize ("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Course addCourse(@RequestBody Course course) {
@@ -52,6 +46,9 @@ public class CourseController {
                 .map(student -> new StudentResponseDTO(
                         student.getId(),
                         student.getName(),
+                        student.getEmail(),
+                        student.getPhone(),
+                        course.getId(),
                         course.getName()))
                 .toList();
     }

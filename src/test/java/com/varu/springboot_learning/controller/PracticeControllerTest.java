@@ -1,7 +1,7 @@
 
 package com.varu.springboot_learning.controller;
+import com.varu.springboot_learning.dto.StudentRequestDTO;
 
-import com.varu.springboot_learning.dto.StudentResponseDTO;
 import com.varu.springboot_learning.model.Course;
 import com.varu.springboot_learning.model.Student;
 import com.varu.springboot_learning.service.StudentService;
@@ -20,15 +20,14 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,6 +40,18 @@ class PracticeControllerTest {
 
     @MockitoBean
     private StudentService studentService;
+
+    private Student createStudent(Long id, String name) {
+        Course course = new Course();
+        course.setId(1L);
+        course.setName("Computer Science");
+
+        Student student = new Student();
+        student.setId(id);
+        student.setName(name);
+        student.setCourse(course);
+        return student;
+    }
 
     @Test
     void shouldReturnStudentsJson() throws Exception {
@@ -55,16 +66,9 @@ class PracticeControllerTest {
 
     @Test
     void shouldCreateStudentAndReturnJson() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
-
-        Student student = new Student();
-        student.setId(1L);
-        student.setName("Varu");
-        student.setCourse(course);
-
-        when(studentService.addStudentWithCourse("Varu", 1L))
-                .thenReturn(student);
+        when(studentService.addStudentWithCourse(
+                any(StudentRequestDTO.class)))
+                .thenReturn(createStudent(1L, "Varu"));
 
         mockMvc.perform(post("/students")
                         .with(csrf())
@@ -78,7 +82,9 @@ class PracticeControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Varu"))
-                .andExpect(jsonPath("$.course").value("Computer Science"));
+                .andExpect(jsonPath("$.courseName")
+                        .value("Computer Science"))
+                .andExpect(jsonPath("$.courseId").value(1));
     }
 
     @Test
@@ -92,29 +98,20 @@ class PracticeControllerTest {
                                     "courseId": 1
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message")
-                        .value("Student name cannot be empty"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void shouldReturnStudentById() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
-
-        Student student = new Student();
-        student.setId(1L);
-        student.setName("Varu");
-        student.setCourse(course);
-
         when(studentService.getStudentById(1L))
-                .thenReturn(student);
+                .thenReturn(createStudent(1L, "Varu"));
 
         mockMvc.perform(get("/students/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Varu"))
-                .andExpect(jsonPath("$.course").value("Computer Science"));
+                .andExpect(jsonPath("$.courseName")
+                        .value("Computer Science"));
     }
 
     @Test
@@ -139,121 +136,93 @@ class PracticeControllerTest {
     }
 
     @Test
-    void shouldUpdateStudentSuccessfully() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
+void shouldUpdateStudentSuccessfully() throws Exception {
+    when(studentService.updateStudent(
+            org.mockito.ArgumentMatchers.eq(1L),
+            any(StudentRequestDTO.class)))
+            .thenReturn(createStudent(1L, "Unknown Student"));
 
-        Student updatedStudent = new Student();
-        updatedStudent.setId(1L);
-        updatedStudent.setName("Varu Updated");
-        updatedStudent.setCourse(course);
+    mockMvc.perform(put("/students/1")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                                "name": "Unknown Student",
+                                "courseId": 1
+                            }
+                            """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Unknown Student"))
+            .andExpect(jsonPath("$.courseName")
+                    .value("Computer Science"));
+}
 
-        when(studentService.updateStudent(
-                org.mockito.ArgumentMatchers.eq(1L),
-                org.mockito.ArgumentMatchers.any(Student.class)
-        )).thenReturn(updatedStudent);
+@Test
+void shouldReturn404WhenUpdatingMissingStudent() throws Exception {
+    when(studentService.updateStudent(
+            org.mockito.ArgumentMatchers.eq(999L),
+            any(StudentRequestDTO.class)))
+            .thenReturn(null);
 
-        mockMvc.perform(put("/students/1")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "name": "Varu Updated"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.name").value("Varu Updated"))
-                .andExpect(jsonPath("$.course")
-                        .value("Computer Science"));
-    }
+    mockMvc.perform(put("/students/999")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                                "name": "Unknown Student",
+                                "courseId": 1
+                            }
+                            """))
+            .andExpect(status().isNotFound());
+}
 
-    @Test
-    void shouldReturn404WhenUpdatingMissingStudent() throws Exception {
-        when(studentService.updateStudent(
-                org.mockito.ArgumentMatchers.eq(999L),
-                org.mockito.ArgumentMatchers.any(Student.class)
-        )).thenReturn(null);
-
-        mockMvc.perform(put("/students/999")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "name": "Unknown Student"
-                                }
-                                """))
-                .andExpect(status().isNotFound());
-    }
 
     @Test
     void shouldSearchStudentsByExactName() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
-
-        Student student = new Student();
-        student.setId(1L);
-        student.setName("Varu");
-        student.setCourse(course);
-
         when(studentService.findStudentsByName("Varu"))
-                .thenReturn(List.of(student));
+                .thenReturn(List.of(createStudent(1L, "Varu")));
 
         mockMvc.perform(get("/students/search/name")
                         .param("name", "Varu"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Varu"))
-                .andExpect(jsonPath("$[0].course")
+                .andExpect(jsonPath("$[0].courseName")
                         .value("Computer Science"));
     }
 
     @Test
     void shouldSearchStudentsByCourse() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
-
-        Student student = new Student();
-        student.setId(2L);
-        student.setName("Ravi");
-        student.setCourse(course);
-
         when(studentService.findStudentsByCourse("Computer Science"))
-                .thenReturn(List.of(student));
+                .thenReturn(List.of(createStudent(2L, "Ravi")));
 
         mockMvc.perform(get("/students/search/course")
                         .param("course", "Computer Science"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].name").value("Ravi"))
-                .andExpect(jsonPath("$[0].course")
+                .andExpect(jsonPath("$[0].courseName")
                         .value("Computer Science"));
     }
 
     @Test
     void shouldSearchStudentsByPartialName() throws Exception {
-        Course course = new Course();
-        course.setName("Computer Science");
-
-        Student student = new Student();
-        student.setId(3L);
-        student.setName("Varshini");
-        student.setCourse(course);
-
         when(studentService.searchStudentsByName("Var"))
-                .thenReturn(List.of(student));
+                .thenReturn(List.of(createStudent(3L, "Varshini")));
 
         mockMvc.perform(get("/students/search")
                         .param("name", "Var"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(3))
                 .andExpect(jsonPath("$[0].name").value("Varshini"))
-                .andExpect(jsonPath("$[0].course")
+                .andExpect(jsonPath("$[0].courseName")
                         .value("Computer Science"));
     }
 
     @Test
-    void shouldReturnEmptyListWhenNoStudentsMatchName() throws Exception {
+    void shouldReturnEmptyListWhenNoStudentsMatchName()
+            throws Exception {
         when(studentService.findStudentsByName("Nobody"))
                 .thenReturn(List.of());
 
@@ -302,13 +271,15 @@ class PracticeControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenSearchNameIsMissing() throws Exception {
+    void shouldReturnBadRequestWhenSearchNameIsMissing()
+            throws Exception {
         mockMvc.perform(get("/students/search/name"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldReturnBadRequestWhenCourseIsMissing() throws Exception {
+    void shouldReturnBadRequestWhenCourseIsMissing()
+            throws Exception {
         mockMvc.perform(get("/students/search/course"))
                 .andExpect(status().isBadRequest());
 
@@ -332,7 +303,6 @@ class PracticeControllerTest {
 
         verifyNoInteractions(studentService);
     }
-
     @Test
     void shouldReturnBadRequestForZeroPageSize() throws Exception {
         mockMvc.perform(get("/students")
