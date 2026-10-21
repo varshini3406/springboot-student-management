@@ -86,27 +86,41 @@ public UserDetailsService userDetailsService(
         return http.build();
     }
 
-    @Bean
+ @Bean
 public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
 
-    String frontendUrl = System.getenv().getOrDefault(
-    "FRONTEND_URL",
-    "http://localhost:5173"
-);
+    // Your deployed frontend
+    List<String> allowedOrigins = new java.util.ArrayList<>(
+        List.of(
+            "https://student-management-frontend-ashen.vercel.app",
+            "http://localhost:5173"
+        )
+    );
 
-configuration.setAllowedOrigins(List.of(frontendUrl));
+    // Read the frontend URL from Render and remove trailing slashes
+    String frontendUrl = System.getenv("FRONTEND_URL");
+
+    if (frontendUrl != null && !frontendUrl.isBlank()) {
+        frontendUrl = frontendUrl.trim().replaceAll("/+$", "");
+
+        if (!allowedOrigins.contains(frontendUrl)) {
+            allowedOrigins.add(frontendUrl);
+        }
+    }
+
+    configuration.setAllowedOrigins(allowedOrigins);
     configuration.setAllowedMethods(
         List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
     );
-    configuration.setAllowedHeaders(
-        List.of("Authorization", "Content-Type")
-    );
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source =
         new UrlBasedCorsConfigurationSource();
 
     source.registerCorsConfiguration("/**", configuration);
+
     return source;
 }
 }
