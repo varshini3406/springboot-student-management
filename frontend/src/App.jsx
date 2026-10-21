@@ -5,13 +5,17 @@ import './App.css'
 const API_URL = (
   import.meta.env.VITE_API_URL || 'http://localhost:8080'
 ).replace(/\/$/, '')
+
 const PAGE_SIZE = 5
 
 function App() {
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
+
   const [courses, setCourses] = useState([])
   const [students, setStudents] = useState([])
+
+  const [newCourseName, setNewCourseName] = useState('')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -79,6 +83,7 @@ function App() {
     ])
 
     setCourses(Array.isArray(courseData) ? courseData : [])
+
     setStudents(
       Array.isArray(studentData)
         ? studentData
@@ -95,6 +100,41 @@ function App() {
       await refreshData()
       setPage(0)
       setMessage('Courses and students loaded successfully!')
+    } catch (error) {
+      setMessage(
+        error instanceof TypeError
+          ? 'Cannot connect to the backend. Check Spring Boot and CORS.'
+          : error.message
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function addCourse(e) {
+    e.preventDefault()
+
+    const trimmedName = newCourseName.trim()
+
+    if (!trimmedName) {
+      setMessage('Please enter a course name.')
+      return
+    }
+
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const created = await apiRequest('/courses', {
+        method: 'POST',
+        body: JSON.stringify({ name: trimmedName }),
+      })
+
+      await refreshData()
+      setNewCourseName('')
+      setMessage(
+        `Course "${created?.name ?? trimmedName}" added successfully!`
+      )
     } catch (error) {
       setMessage(
         error instanceof TypeError
@@ -286,7 +326,33 @@ function App() {
 
       {message && (
         <section className="panel">
-          <p className="message" role="status">{message}</p>
+          <p className="message" role="status">
+            {message}
+          </p>
+        </section>
+      )}
+
+      {/* Add Course: shown for the admin account */}
+      {username.trim().toLowerCase() === 'admin' && (
+        <section className="panel">
+          <h2>Add Course</h2>
+
+          <form onSubmit={addCourse}>
+            <label htmlFor="newCourseName">Course Name</label>
+
+            <input
+              id="newCourseName"
+              value={newCourseName}
+              onChange={(e) => setNewCourseName(e.target.value)}
+              placeholder="Enter course name"
+              maxLength={100}
+              required
+            />
+
+            <button type="submit" disabled={loading}>
+              {loading ? 'Adding...' : 'Add Course'}
+            </button>
+          </form>
         </section>
       )}
 
@@ -347,7 +413,7 @@ function App() {
 
       {editingStudent && (
         <section className="panel">
-          <h2>Edit Student — ID: {editingStudent.id}</h2>
+          <h2>Edit Student - ID: {editingStudent.id}</h2>
 
           <form onSubmit={updateStudent}>
             <label htmlFor="editName">Student Name</label>
@@ -510,7 +576,9 @@ function App() {
                 Previous
               </button>
 
-              <span>Page {currentPage + 1} of {totalPages}</span>
+              <span>
+                Page {currentPage + 1} of {totalPages}
+              </span>
 
               <button
                 type="button"
